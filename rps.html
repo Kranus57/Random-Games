@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Rock Paper Scissors</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+</head>
+<body>
+  <h1>Rock Paper Scissors</h1>
+  <div>
+    <button onclick="playRPS('rock')">✊ Rock</button>
+    <button onclick="playRPS('paper')">✋ Paper</button>
+    <button onclick="playRPS('scissors')">✌ Scissors</button>
+  </div>
+  <p id="rpsResult"></p>
+  <a href="/">Back to Home</a>
+
+  <script>
+    function playRPS(playerChoice) {
+      const choices = ["rock", "paper", "scissors"];
+      const computerChoice = choices[Math.floor(Math.random() * 3)];
+      let result = "";
+
+      if (playerChoice === computerChoice) {
+        result = `Draw! You both chose ${playerChoice}`;
+        reportResult("rps", "draw", 0);
+      } else if (
+        (playerChoice === "rock" && computerChoice === "scissors") ||
+        (playerChoice === "paper" && computerChoice === "rock") ||
+        (playerChoice === "scissors" && computerChoice === "paper")
+      ) {
+        result = `You Win! 🎉 (${playerChoice} beats ${computerChoice})`;
+        reportResult("rps", "win", 1);
+      } else {
+        result = `You Lose 😢 (${computerChoice} beats ${playerChoice})`;
+        reportResult("rps", "lose", 0);
+      }
+
+      document.getElementById("rpsResult").textContent = result;
+    }
+  </script>
+</body>
+</html>

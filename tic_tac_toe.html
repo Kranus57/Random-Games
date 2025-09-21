@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>/* Tic Tac Toe Enhancements */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 120px);
+  grid-gap: 8px;
+  justify-content: center;
+  margin: 20px auto;
+}
+
+.cell {
+  width: 120px;
+  height: 120px;
+  background: #fff;
+  border: 2px solid #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.cell.hover:hover {
+  background: #d0f0ff;
+  transform: scale(1.1);
+}
+
+.cell.winner {
+  background: #4CAF50 !important;
+  color: white;
+  animation: glow 1s infinite alternate;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 5px #4CAF50; }
+  to { box-shadow: 0 0 20px #4CAF50; }
+}
+
+.mode-select {
+  margin: 15px;
+}
+</style>
+  <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+</head>
+<body>
+  <h1>Tic Tac Toe</h1>
+
+  <div class="mode-select">
+    <label for="mode">Choose Mode:</label>
+    <select id="mode" onchange="resetTicTacToe()">
+      <option value="human">2 Players</option>
+      <option value="easy">AI Easy</option>
+      <option value="medium">AI Medium</option>
+      <option value="hard">AI Hard</option>
+    </select>
+  </div>
+
+  <div id="ticTacToeBoard" class="grid"></div>
+  <p id="ticTacToeStatus"></p>
+  <button onclick="resetTicTacToe()">Restart</button>
+  <a href="/">Back to Home</a>
+
+  <script>
+    const boardElement = document.getElementById("ticTacToeBoard");
+    const statusElement = document.getElementById("ticTacToeStatus");
+    const modeSelect = document.getElementById("mode");
+
+    let board, currentPlayer, gameOver;
+
+    function renderBoard() {
+      boardElement.innerHTML = "";
+      board.forEach((cell, index) => {
+        const div = document.createElement("div");
+        div.className = "cell";
+        div.textContent = cell ? cell : "";
+        if (!cell && !gameOver) {
+          div.classList.add("hover");
+          div.onclick = () => makeMove(index);
+        }
+        boardElement.appendChild(div);
+      });
+    }
+
+    function makeMove(index) {
+      if (board[index] || gameOver) return;
+      board[index] = currentPlayer;
+      if (checkWinner()) {
+        statusElement.textContent = `${currentPlayer} Wins! 🎉`;
+        highlightWinner();
+        gameOver = true;
+        reportResult("tic_tac_toe", `${currentPlayer} wins`, 1);
+        return;
+      }
+      if (board.every(cell => cell)) {
+        statusElement.textContent = "It's a Draw!";
+        reportResult("tic_tac_toe", "draw", 0);
+        gameOver = true;
+        return;
+      }
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      renderBoard();
+
+      // AI move if enabled
+      if (!gameOver && currentPlayer === "O" && modeSelect.value !== "human") {
+        setTimeout(aiMove, 400);
+      }
+    }
+
+    function aiMove() {
+      let move;
+      if (modeSelect.value === "easy") {
+        move = easyAI();
+      } else if (modeSelect.value === "medium") {
+        move = mediumAI();
+      } else {
+        move = hardAI();
+      }
+      makeMove(move);
+    }
+
+    function easyAI() {
+      const available = board.map((v, i) => v ? null : i).filter(v => v !== null);
+      return available[Math.floor(Math.random() * available.length)];
+    }
+
+    function mediumAI() {
+      // Try to win, else random
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = "O";
+          if (checkWinner()) { board[i] = null; return i; }
+          board[i] = null;
+        }
+      }
+      return easyAI();
+    }
+
+    function hardAI() {
+      return minimax(board, "O").index;
+    }
+
+    function minimax(newBoard, player) {
+      const availSpots = newBoard.map((v, i) => v ? null : i).filter(v => v !== null);
+
+      if (winning(newBoard, "X")) return { score: -10 };
+      if (winning(newBoard, "O")) return { score: 10 };
+      if (availSpots.length === 0) return { score: 0 };
+
+      const moves = [];
+      for (let i = 0; i < availSpots.length; i++) {
+        const move = {};
+        move.index = availSpots[i];
+        newBoard[availSpots[i]] = player;
+
+        if (player === "O") {
+          const result = minimax(newBoard, "X");
+          move.score = result.score;
+        } else {
+          const result = minimax(newBoard, "O");
+          move.score = result.score;
+        }
+        newBoard[availSpots[i]] = null;
+        moves.push(move);
+      }
+
+      let bestMove;
+      if (player === "O") {
+        let bestScore = -Infinity;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score > bestScore) {
+            bestScore = moves[i].score;
+            bestMove = i;
+          }
+        }
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < moves.length; i++) {
+          if (moves[i].score < bestScore) {
+            bestScore = moves[i].score;
+            bestMove = i;
+          }
+        }
+      }
+      return moves[bestMove];
+    }
+
+    function checkWinner() {
+      return winning(board, currentPlayer);
+    }
+
+    function winning(b, player) {
+      const winPatterns = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      return winPatterns.some(pattern =>
+        pattern.every(idx => b[idx] === player)
+      );
+    }
+
+    function highlightWinner() {
+      const winPatterns = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      winPatterns.forEach(pattern => {
+        if (pattern.every(idx => board[idx] === currentPlayer)) {
+          pattern.forEach(idx => boardElement.children[idx].classList.add("winner"));
+        }
+      });
+    }
+
+    function resetTicTacToe() {
+      board = Array(9).fill(null);
+      currentPlayer = "X";
+      gameOver = false;
+      statusElement.textContent = "";
+      renderBoard();
+    }
+
+    resetTicTacToe();
+  </script>
+</body>
+</html>
+
+        
